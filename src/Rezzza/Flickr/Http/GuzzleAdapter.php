@@ -4,6 +4,7 @@ namespace Rezzza\Flickr\Http;
 
 use Guzzle\Http\Client;
 use Guzzle\Http\Message\RequestInterface;
+use Guzzle\Http\Exception\ClientErrorResponseException;
 
 /**
  * GuzzleAdapter
@@ -13,18 +14,18 @@ use Guzzle\Http\Message\RequestInterface;
  */
 class GuzzleAdapter implements AdapterInterface
 {
-    
+
     private $client;
-    
+
     public function __construct()
     {
         if (!class_exists('\Guzzle\Http\Client')) {
             throw new \LogicException('Please, install guzzle/http before using this adapter.');
         }
-        
+
         $this->client  = new Client('', array('redirect.disable' => true));
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -34,21 +35,28 @@ class GuzzleAdapter implements AdapterInterface
         // flickr does not supports this header and return a 417 http code during upload
         $request->removeHeader('Expect');
 
-        $response = $request->send();
+        try {
 
-        if ($response->isSuccessful()) {
+            $response = $request->send();
 
-            switch($response->getContentType()){
+            if ($response->isSuccessful()) {
 
-                case "application/json":
-                    return $response->json();
-                    break;
+                switch ($response->getContentType()) {
 
-                case "text/xml; charset=utf-8":
-                    return $response->xml();
-                    break;
+                    case "application/json":
+                        return $response->json();
+                        break;
+
+                    case "text/xml; charset=utf-8":
+                        return $response->xml();
+                        break;
+
+                }
 
             }
+        } catch (ClientErrorResponseException $e) {
+
+            return false;
 
         }
 
@@ -90,7 +98,7 @@ class GuzzleAdapter implements AdapterInterface
 
         return $responses;
     }
-    
+
     /**
      * @return $client
      */
